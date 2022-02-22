@@ -155,7 +155,16 @@ void q_release_element(element_t *e)
  */
 int q_size(struct list_head *head)
 {
-    return -1;
+    int num = 0;
+    if (head == NULL || list_empty(head)) {
+        return num;
+    }
+
+    struct list_head *running;
+    list_for_each (running, head)
+        num++;
+
+    return num;
 }
 
 /*
@@ -169,6 +178,20 @@ int q_size(struct list_head *head)
 bool q_delete_mid(struct list_head *head)
 {
     // https://leetcode.com/problems/delete-the-middle-node-of-a-linked-list/
+    if (!head || list_empty(head)) {
+        return false;
+    }
+
+    struct list_head *first = head->next;
+    struct list_head *second = head->next;
+
+    while (second != head && second->next != head) {
+        first = first->next;
+        second = second->next->next;
+    }
+
+    list_del(first);
+    free(list_entry(first, element_t, list));
     return true;
 }
 
@@ -184,6 +207,21 @@ bool q_delete_mid(struct list_head *head)
 bool q_delete_dup(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+    if (!head && list_empty(head)) {
+        return false;
+    }
+
+    struct list_head *first = head;
+    struct list_head *second = head;
+
+    while (second->next != head) {
+        if (list_entry(first, element_t, list) !=
+            list_entry(second, element_t, list)) {
+            first->next = second;
+        }
+        second = second->next;
+    }
+
     return true;
 }
 
@@ -193,6 +231,17 @@ bool q_delete_dup(struct list_head *head)
 void q_swap(struct list_head *head)
 {
     // https://leetcode.com/problems/swap-nodes-in-pairs/
+    struct list_head *first = head;
+    struct list_head *second = head;
+
+    while (first != head && first->next != head) {
+        second = first->next;
+        list_del(first);
+        first->prev = second;
+        first->next = second->next;
+        second->next = first;
+        first = first->next;
+    }
 }
 
 /*
@@ -202,7 +251,21 @@ void q_swap(struct list_head *head)
  * (e.g., by calling q_insert_head, q_insert_tail, or q_remove_head).
  * It should rearrange the existing ones.
  */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (!head->next) {
+        return;
+    }
+
+    struct list_head *running, *safe;
+
+    list_for_each_safe (running, safe, head) {
+        running->next = running->prev;
+        running->prev = safe;
+    }
+    head->next = head->prev;
+    head->prev = safe;
+}
 
 /*
  * Sort elements of queue in ascending order
