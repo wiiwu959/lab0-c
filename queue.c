@@ -18,7 +18,7 @@
 struct list_head *q_new()
 {
     struct list_head *q = malloc(sizeof(struct list_head));
-    if(q == NULL) {
+    if (!q) {
         return NULL;
     }
     INIT_LIST_HEAD(q);
@@ -28,12 +28,13 @@ struct list_head *q_new()
 /* Free all storage used by queue */
 void q_free(struct list_head *l)
 {
-    if (!l || list_empty(l)) {
+    if (!l) {
         return;
     }
     element_t *to_free, *next_to_free;
-    list_for_each_entry_safe (to_free, next_to_free, l, list)
+    list_for_each_entry_safe (to_free, next_to_free, l, list) {
         q_release_element(to_free);
+    }
     free(l);
 }
 
@@ -46,14 +47,18 @@ void q_free(struct list_head *l)
  */
 bool q_insert_head(struct list_head *head, char *s)
 {
-    if (head == NULL) {
+    if (!head) {
         return false;
     }
     element_t *new_node = malloc(sizeof(element_t));
-    if (new_node == NULL) {
+    if (!new_node) {
         return false;
     }
     new_node->value = malloc(strlen(s) + 1);
+    if (!new_node->value) {
+        free(new_node);
+        return false;
+    }
     strncpy(new_node->value, s, strlen(s));
     new_node->value[strlen(s)] = '\0';
 
@@ -70,11 +75,11 @@ bool q_insert_head(struct list_head *head, char *s)
  */
 bool q_insert_tail(struct list_head *head, char *s)
 {
-    if (head == NULL) {
+    if (!head) {
         return false;
     }
     element_t *new_tail = malloc(sizeof(element_t));
-    if (new_tail == NULL) {
+    if (!new_tail) {
         return false;
     }
 
@@ -103,17 +108,18 @@ bool q_insert_tail(struct list_head *head, char *s)
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
     // Return NULL if queue is NULL or empty
-    if (head == NULL || list_empty(head)) {
+    if (!head || list_empty(head)) {
         return NULL;
     }
 
     element_t *head_element = list_first_entry(head, element_t, list);
-    list_del(head->next);
+    list_del_init(&head_element->list);
 
-    if (sp != NULL) {
+    if (sp) {
         strncpy(sp, head_element->value, bufsize - 1);
         sp[bufsize - 1] = '\0';
     }
+
     return head_element;
 }
 
@@ -124,14 +130,14 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
     // Return NULL if queue is NULL or empty
-    if (head == NULL || list_empty(head)) {
+    if (!head || list_empty(head)) {
         return NULL;
     }
 
     element_t *tail_element = list_last_entry(head, element_t, list);
-    list_del(head->prev);
+    list_del_init(&tail_element->list);
 
-    if (sp != NULL) {
+    if (sp) {
         strncpy(sp, tail_element->value, bufsize - 1);
         sp[bufsize - 1] = '\0';
     }
@@ -156,7 +162,7 @@ void q_release_element(element_t *e)
 int q_size(struct list_head *head)
 {
     int num = 0;
-    if (head == NULL || list_empty(head)) {
+    if (!head || list_empty(head)) {
         return num;
     }
 
@@ -191,7 +197,7 @@ bool q_delete_mid(struct list_head *head)
     }
 
     list_del(first);
-    free(list_entry(first, element_t, list));
+    q_release_element(list_entry(first, element_t, list));
     return true;
 }
 
@@ -207,7 +213,7 @@ bool q_delete_mid(struct list_head *head)
 bool q_delete_dup(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
-    if (!head && list_empty(head)) {
+    if (!head) {
         return false;
     }
 
@@ -232,10 +238,9 @@ void q_swap(struct list_head *head)
 {
     // https://leetcode.com/problems/swap-nodes-in-pairs/
     struct list_head *first = head;
-    struct list_head *second = head;
 
     while (first != head && first->next != head) {
-        second = first->next;
+        struct list_head *second = first->next;
         list_del(first);
         first->prev = second;
         first->next = second->next;
@@ -263,8 +268,8 @@ void q_reverse(struct list_head *head)
         running->next = running->prev;
         running->prev = safe;
     }
-    head->next = head->prev;
-    head->prev = safe;
+    running->next = running->prev;
+    running->prev = safe;
 }
 
 /*
