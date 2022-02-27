@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -237,14 +238,20 @@ bool q_delete_dup(struct list_head *head)
 void q_swap(struct list_head *head)
 {
     // https://leetcode.com/problems/swap-nodes-in-pairs/
-    struct list_head *first = head;
+    struct list_head *first = head->next;
 
     while (first != head && first->next != head) {
         struct list_head *second = first->next;
-        list_del(first);
-        first->prev = second;
+
         first->next = second->next;
+        first->next->prev = first;
+
+        second->prev = first->prev;
+        second->prev->next = second;
+
         second->next = first;
+        first->prev = second;
+
         first = first->next;
     }
 }
@@ -277,4 +284,65 @@ void q_reverse(struct list_head *head)
  * No effect if q is NULL or empty. In addition, if q has only one
  * element, do nothing.
  */
-void q_sort(struct list_head *head) {}
+struct list_head *merge(struct list_head *first, struct list_head *second)
+{
+    struct list_head *new_head = NULL;
+    struct list_head **ptr = &new_head;
+
+    for (; first && second; ptr = &(*ptr)->next) {
+        element_t *first_entry = list_entry(first, element_t, list);
+        element_t *second_entry = list_entry(second, element_t, list);
+        if (strcmp(first_entry->value, second_entry->value) < 0) {
+            *ptr = first;
+            first = first->next;
+        } else {
+            *ptr = second;
+            second = second->next;
+        }
+    }
+    *ptr = (struct list_head *) ((uintptr_t) first | (uintptr_t) second);
+    return new_head;
+}
+
+struct list_head *merge_sort(struct list_head *head)
+{
+    if (!head || !head->next) {
+        return head;
+    }
+
+    struct list_head *first = head;
+    struct list_head *second = head->next;
+
+    // find middle pointer
+    while (second && second->next) {
+        first = first->next;
+        second = second->next->next;
+    }
+
+    struct list_head *middle = first->next;
+    first->next = NULL;
+
+    return merge(merge_sort(head), merge_sort(middle));
+}
+
+void q_sort(struct list_head *head)
+{
+    if (!head || list_empty(head) || list_is_singular(head)) {
+        return;
+    }
+
+    // become not circular
+    head->prev->next = NULL;
+    head->next = merge_sort(head->next);
+
+    // reconnect to double-linked
+    struct list_head *first = head;
+    struct list_head *second = head->next;
+    while (second) {
+        second->prev = first;
+        first = first->next;
+        second = second->next;
+    }
+    first->next = head;
+    head->prev = first;
+}
